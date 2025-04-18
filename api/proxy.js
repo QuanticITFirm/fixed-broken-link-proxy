@@ -1,33 +1,24 @@
+export default async function handler(req, res) {
+  const targetUrl = req.query.url;
 
-const fetch = require('node-fetch');
-const { JSDOM } = require('jsdom');
-
-module.exports = async (req, res) => {
-  const { url } = req.query;
-  if (!url || !url.startsWith('http')) {
-    return res.status(400).json({ error: 'Invalid URL' });
+  if (!targetUrl) {
+    return res.status(400).json({ error: "Missing URL parameter" });
   }
 
   try {
-    const response = await fetch(url, {
+    const fetchResponse = await fetch(targetUrl, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; BrokenLinkBot/1.0)',
-      },
-      timeout: 10000,
+        'User-Agent': 'Mozilla/5.0 (compatible; BrokenLinkChecker/1.0)'
+      }
     });
 
-    const html = await response.text();
-    const dom = new JSDOM(html);
-    const document = dom.window.document;
+    const html = await fetchResponse.text();
 
-    const anchors = Array.from(document.querySelectorAll('a[href]'));
-    const links = anchors
-      .map(a => a.href)
-      .filter(link => link.startsWith('http') && link.includes(new URL(url).hostname));
-
-    const uniqueLinks = [...new Set(links)];
-    res.status(200).json({ url, links: uniqueLinks });
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch or parse URL' });
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Methods", "GET");
+    res.status(200).send(html);
+  } catch (error) {
+    console.error("Proxy error:", error);
+    res.status(500).json({ error: "Failed to fetch target URL" });
   }
-};
+}
